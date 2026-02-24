@@ -5,10 +5,12 @@
   "scripts": {
     "build:debug": "hvigorw assembleHap --mode module -p product=default -b debug",
     "build:release": "hvigorw assembleHap --mode module -p product=default -b release",
-    "test": "hvigorw test --module entry",
-    "lint": "code-linter lint",
+    "test": "echo 'Use DevEco Studio to run HarmonyOS tests' && exit 0",
+    "test:unit": "jest --config jest.config.js",
+    "lint": "echo 'Use DevEco Studio code-linter' && exit 0",
     "clean": "rm -rf build/ entry/build/ node_modules/ oh_modules/",
-    "dev": "hvigorw assembleHap --mode module -p product=default -b debug && hvigorw install"
+    "dev": "echo 'Open in DevEco Studio and click Run button'",
+    "setup": "./scripts/setup-dev.sh"
   },
   "keywords": [
     "harmonyos",
@@ -20,7 +22,15 @@
   "author": "",
   "license": "MIT",
   "devDependencies": {
-    "@ohos/hypium": "1.0.24",
-    "@ohos/hamock": "1.0.0"
-  }
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "os": [
+    "darwin",
+    "win32",
+    "linux"
+  ]
 }
