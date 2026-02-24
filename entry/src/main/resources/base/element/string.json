@@ -1,0 +1,31 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "敲敲计"
+    },
+    {
+      "name": "permission_accelerometer_reason",
+      "value": "需要加速度传感器权限来检测敲打动作"
+    },
+    {
+      "name": "permission_gyroscope_reason",
+      "value": "需要陀螺仪传感器权限来提高敲打检测准确率"
+    },
+    {
+      "name": "permission_vibrate_reason",
+      "value": "需要振动权限提供敲打反馈"
+    }
+      "name": "EntryAbility_label",
+      "value": "label"
+    }
+  ]
+}
