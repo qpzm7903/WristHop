@@ -1,0 +1,11 @@
+{
+  "testsuits": [
+    {
+      "name": "unit-tests",
+      "suites": [
+        "./**/*.test.ets"
+      ]
+    }
+  ],
+  "mode": "debug"
+}
