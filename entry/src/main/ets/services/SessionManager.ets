@@ -3,7 +3,7 @@
  * 状态机管理敲打会话
  */
 
-import type { SessionData, SessionState, SessionEvent, TapRecord, BodyPart } from '../models/TapDataModels';
+import { SessionData, SessionState, SessionEvent, TapRecord, BodyPart } from '../models/TapDataModels';
 import { generateId } from '../models/TapDataModels';
 
 export class SessionManager {
@@ -39,7 +39,7 @@ export class SessionManager {
   /**
    * 状态转换
    */
-  transition(event: SessionEvent, payload?: any): void {
+  transition(event: SessionEvent, payload?: TapRecord): void {
     const previousState = this.state;
 
     switch (this.state) {
@@ -188,7 +188,16 @@ export class SessionManager {
   }
 
   getData(): SessionData {
-    return { ...this.data };
+    return {
+      state: this.data.state,
+      currentPart: this.data.currentPart,
+      currentCount: this.data.currentCount,
+      targetCount: this.data.targetCount,
+      startTime: this.data.startTime,
+      pauseTime: this.data.pauseTime,
+      totalPauseDuration: this.data.totalPauseDuration,
+      tapRecords: [...this.data.tapRecords]
+    };
   }
 
   getState(): SessionState {

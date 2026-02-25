@@ -25,6 +25,12 @@ interface TapEvent {
   wristAngle: number;
 }
 
+export interface BaselineAccel {
+  x: number;
+  y: number;
+  z: number;
+}
+
 export class TapDetector {
   // 加速度窗口（用于时序分析）
   private accelWindow: SensorData[] = [];
@@ -44,7 +50,7 @@ export class TapDetector {
 
   // 手腕佩戴位置（需要校准）
   private wearingHand: 'left' | 'right' = 'left';
-  private baselineAccel: { x: number, y: number, z: number } = { x: 0, y: 0, z: -9.8 };
+  private baselineAccel: BaselineAccel = { x: 0, y: 0, z: -9.8 };
 
   /**
    * 核心检测算法 - 多特征融合
@@ -135,7 +141,7 @@ export class TapDetector {
             force: this.calculateForce(this.maxAccelDuringTap),
             confidence: this.calculateConfidence(duration, gyroMag),
             wristAngle: this.calculateWristAngle()
-          };
+          } as TapEvent;
         }
       }
       
@@ -199,7 +205,7 @@ export class TapDetector {
       x: accel.x,
       y: accel.y,
       z: accel.z
-    };
+    } as BaselineAccel;
     console.info(`Calibrated baseline: ${JSON.stringify(this.baselineAccel)}`);
   }
 
@@ -213,7 +219,7 @@ export class TapDetector {
   /**
    * 设置基线加速度
    */
-  setBaselineAccel(baseline: { x: number, y: number, z: number }): void {
+  setBaselineAccel(baseline: BaselineAccel): void {
     this.baselineAccel = baseline;
   }
 

@@ -59,7 +59,6 @@
       }
     ],
     "extensionAbilities": [
-    "extensionAbilities": [
       {
         "name": "EntryBackupAbility",
         "srcEntry": "./ets/entrybackupability/EntryBackupAbility.ets",

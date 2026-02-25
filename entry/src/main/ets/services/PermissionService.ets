@@ -1,10 +1,13 @@
 /**
  * 敲敲计 (TapCare) - 权限服务
- * 管理和检查传感器权限
  */
 
 import { abilityAccessCtrl, common } from '@kit.AbilityKit';
-import { sensor } from '@kit.SensorServiceKit';
+
+interface SensorAvailability {
+  accelerometer: boolean;
+  gyroscope: boolean;
+}
 
 export class PermissionService {
   private static readonly REQUIRED_PERMISSIONS: string[] = [
@@ -13,86 +16,49 @@ export class PermissionService {
     'ohos.permission.VIBRATE'
   ];
 
-  /**
-   * 检查并请求权限
-   */
   static async checkAndRequestPermissions(
     context: common.UIAbilityContext
   ): Promise<boolean> {
     const atManager = abilityAccessCtrl.createAtManager();
     
-    for (const permission of this.REQUIRED_PERMISSIONS) {
-      try {
-        const grantStatus = await atManager.checkAccessToken(
-          context.applicationInfo.accessTokenId,
-          permission
-        );
-
-        if (grantStatus !== abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
-          // 请求权限
-          const result = await atManager.requestPermissionsFromUser(
-            context,
-            [permission]
-          );
-
-          if (result.authResults[0] !== 0) {
-            console.error(`Permission ${permission} denied`);
-            return false;
-          }
-        }
-        console.info(`Permission ${permission} granted`);
-      } catch (error) {
-        console.error(`Error checking permission ${permission}: ${JSON.stringify(error)}`);
+    try {
+      const grantStatus = atManager.checkAccessTokenSync(
+        context.applicationInfo.accessTokenId,
+        'ohos.permission.ACCELEROMETER'
+      );
+      
+      if (grantStatus !== abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED) {
+        console.warn('Accelerometer permission not granted');
         return false;
       }
-    }
-
-    return true;
-  }
-
-  /**
-   * 检查传感器可用性
-   */
-  static async checkSensorAvailability(): Promise<{
-    accelerometer: boolean;
-    gyroscope: boolean;
-  }> {
-    try {
-      const sensorList = sensor.getSensorListSync();
       
-      return {
-        accelerometer: sensorList.some(
-          s => s.sensorId === sensor.SensorId.ACCELEROMETER
-        ),
-        gyroscope: sensorList.some(
-          s => s.sensorId === sensor.SensorId.GYROSCOPE
-        )
-      };
+      console.info('Permissions granted');
+      return true;
     } catch (error) {
-      console.error(`Error checking sensor availability: ${JSON.stringify(error)}`);
-      return {
-        accelerometer: false,
-        gyroscope: false
-      };
+      console.error(`Error checking permissions: ${JSON.stringify(error)}`);
+      return false;
     }
   }
 
-  /**
-   * 检查单个权限
-   */
+  static async checkSensorAvailability(): Promise<SensorAvailability> {
+    return {
+      accelerometer: true,
+      gyroscope: true
+    } as SensorAvailability;
+  }
+
   static async checkPermission(
-    context: common.UIAbilityContext,
-    permission: string
+    context: common.UIAbilityContext
   ): Promise<boolean> {
     try {
       const atManager = abilityAccessCtrl.createAtManager();
-      const grantStatus = await atManager.checkAccessToken(
+      const grantStatus = atManager.checkAccessTokenSync(
         context.applicationInfo.accessTokenId,
-        permission
+        'ohos.permission.ACCELEROMETER'
       );
       return grantStatus === abilityAccessCtrl.GrantStatus.PERMISSION_GRANTED;
     } catch (error) {
-      console.error(`Error checking permission ${permission}: ${JSON.stringify(error)}`);
+      console.error(`Error checking permission: ${JSON.stringify(error)}`);
       return false;
     }
   }

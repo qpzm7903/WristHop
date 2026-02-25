@@ -10,11 +10,13 @@ import { PermissionService } from '../services/PermissionService';
 import { CalibrationService } from '../services/CalibrationService';
 import { DeviceAdapter } from '../common/DeviceAdapter';
 import { ThemeManager } from '../common/ThemeManager';
-import type { SessionState, TapRecord, BodyPart } from '../models/TapDataModels';
+import { SessionState, TapRecord, BodyPart } from '../models/TapDataModels';
 import { SessionEvent, generateId, getForceLevel } from '../models/TapDataModels';
+import { SensorSimulator } from '../services/SensorSimulator';
 import { vibrator } from '@kit.SensorServiceKit';
 import { promptAction } from '@kit.ArkUI';
 import { common } from '@kit.AbilityKit';
+import type { BaselineAccel } from '../services/TapDetector';
 
 @Entry
 @Component
@@ -38,6 +40,9 @@ struct Index {
   private context: common.UIAbilityContext | null = null;
 
   aboutToAppear() {
+    // 启用模拟器模式
+    this.tapDetectionService.setSimulationMode(false);
+    console.info('Real sensor mode enabled (simulation disabled)');
     // 初始化设备适配器
     DeviceAdapter.init().then(() => {
       console.info('Device adapter initialized');
@@ -97,7 +102,7 @@ struct Index {
    */
   private async loadSettings() {
     try {
-      await this.dataStorageService.initialize(this.context);
+      if (this.context) { await this.dataStorageService.initialize(this.context); }
       const settings = await this.dataStorageService.getSettings();
       
       this.targetCount = settings.targetPerSession;
@@ -107,7 +112,7 @@ struct Index {
       const calibration = await this.dataStorageService.getCalibration();
       if (calibration) {
         this.isCalibrated = true;
-        this.tapDetectionService.calibrate(calibration.baselineAccel);
+        this.tapDetectionService.calibrate(calibration.baselineAccel as BaselineAccel);
         this.tapDetectionService.setWearingHand(calibration.wearingHand);
       }
     } catch (error) {
@@ -169,7 +174,7 @@ struct Index {
     
     // 振动庆祝
     try {
-      vibrator.vibrate([50, 100, 50, 100, 50]);
+      vibrator.vibrate(100);
     } catch (error) {
       // ignore
     }
@@ -252,7 +257,7 @@ struct Index {
   private startDurationTimer() {
     this.durationTimer = setInterval(() => {
       this.sessionDuration = this.sessionManager.getFormattedDuration();
-    }, 1000) as unknown as number;
+    }, 1000) as number;
   }
 
   /**
@@ -271,7 +276,7 @@ struct Index {
       await this.dataStorageService.saveCalibration(result);
       
       // 应用到检测服务
-      this.tapDetectionService.calibrate(result.baselineAccel);
+      this.tapDetectionService.calibrate(result.baselineAccel as BaselineAccel);
       this.tapDetectionService.setWearingHand(result.wearingHand);
       
       this.isCalibrated = true;
@@ -380,6 +385,23 @@ struct Index {
           .justifyContent(FlexAlign.SpaceEvenly)
         }
         .margin({ top: 30 })
+
+        // 底部：控制按钮
+        // 模拟器测试按钮
+        Column() {
+          Button('模拟敲打')
+            .width(DeviceAdapter.scaleSize(100))
+            .height(DeviceAdapter.scaleSize(32))
+            .fontSize(DeviceAdapter.scaleFont(11))
+            .fontColor('#FFFFFF')
+            .backgroundColor('#FF9800')
+            .onClick(() => {
+              this.tapDetectionService.simulateTap();
+            })
+        }
+        .width('100%')
+        .alignItems(HorizontalAlign.Center)
+        .margin({ top: 10 })
 
         // 底部：控制按钮
         Row() {

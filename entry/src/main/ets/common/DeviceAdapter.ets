@@ -15,83 +15,58 @@ export interface DeviceConfig {
 export class DeviceAdapter {
   private static config: DeviceConfig | null = null;
 
-  /**
-   * 初始化设备配置
-   */
   static async init(): Promise<void> {
     try {
       const displayInfo = display.getDefaultDisplaySync();
       const width = displayInfo.width;
       const height = displayInfo.height;
-      
-      // GT 4 尺寸：466x466 圆形表盘
-      // 基准：466px
       const baseWidth = 466;
       
-      this.config = {
+      DeviceAdapter.config = {
         screenWidth: width,
         screenHeight: height,
-        isRound: true, // GT 4 是圆形表盘
+        isRound: true,
         scale: width / baseWidth
-      };
+      } as DeviceConfig;
       
-      console.info(`Device initialized: ${width}x${height}, scale: ${this.config.scale}`);
+      console.info(`Device initialized: ${width}x${height}, scale: ${DeviceAdapter.config.scale}`);
     } catch (error) {
       console.error(`Failed to initialize device adapter: ${JSON.stringify(error)}`);
-      // 默认配置
-      this.config = {
+      DeviceAdapter.config = {
         screenWidth: 466,
         screenHeight: 466,
         isRound: true,
         scale: 1.0
-      };
+      } as DeviceConfig;
     }
   }
 
-  /**
-   * 获取设备配置
-   */
   static getConfig(): DeviceConfig {
-    if (!this.config) {
+    if (!DeviceAdapter.config) {
       throw new Error('DeviceAdapter not initialized. Call init() first.');
     }
-    return this.config;
+    return DeviceAdapter.config;
   }
 
-  /**
-   * 适配字体大小
-   */
   static scaleFont(size: number): number {
-    if (!this.config) return size;
-    return Math.round(size * this.config.scale);
+    if (!DeviceAdapter.config) return size;
+    return Math.round(size * DeviceAdapter.config.scale);
   }
 
-  /**
-   * 适配尺寸
-   */
   static scaleSize(size: number): number {
-    if (!this.config) return size;
-    return Math.round(size * this.config.scale);
+    if (!DeviceAdapter.config) return size;
+    return Math.round(size * DeviceAdapter.config.scale);
   }
 
-  /**
-   * 获取屏幕宽度
-   */
   static getScreenWidth(): number {
-    return this.config?.screenWidth || 466;
+    return DeviceAdapter.config?.screenWidth || 466;
   }
 
-  /**
-   * 获取屏幕高度
-   */
   static getScreenHeight(): number {
-    return this.config?.screenHeight || 466;
+    return DeviceAdapter.config?.screenHeight || 466;
   }
 
-  /**
-   * 检查是否为圆形表盘
-   */
   static isRoundDisplay(): boolean {
-    return this.config?.isRound ?? true;
+    return DeviceAdapter.config?.isRound ?? true;
   }
 }

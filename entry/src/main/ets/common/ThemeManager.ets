@@ -1,26 +1,24 @@
 /**
  * 敲敲计 (TapCare) - 主题管理器
- * 深色模式支持
  */
+
+export interface ThemeColors {
+  primary: string;
+  secondary: string;
+  background: string;
+  surface: string;
+  text: string;
+  textSecondary: string;
+  error: string;
+  success: string;
+  accent: string;
+}
 
 export interface Theme {
   isDark: boolean;
-  colors: {
-    primary: string;
-    secondary: string;
-    background: string;
-    surface: string;
-    text: string;
-    textSecondary: string;
-    error: string;
-    success: string;
-    accent: string;
-  };
+  colors: ThemeColors;
 }
 
-/**
- * 浅色主题
- */
 export const LightTheme: Theme = {
   isDark: false,
   colors: {
@@ -34,11 +32,8 @@ export const LightTheme: Theme = {
     success: '#2ECC71',
     accent: '#FFE66D'
   }
-};
+} as Theme;
 
-/**
- * 深色主题（默认，省电）
- */
 export const DarkTheme: Theme = {
   isDark: true,
   colors: {
@@ -52,47 +47,41 @@ export const DarkTheme: Theme = {
     success: '#2ECC71',
     accent: '#FFE66D'
   }
-};
+} as Theme;
 
-/**
- * 主题管理器
- */
 export class ThemeManager {
-  private static currentTheme: Theme = DarkTheme; // 默认深色（省电）
+  private static currentTheme: Theme = DarkTheme;
 
-  /**
-   * 获取当前主题
-   */
   static getTheme(): Theme {
-    return this.currentTheme;
+    return ThemeManager.currentTheme;
   }
 
-  /**
-   * 设置主题
-   */
   static setTheme(isDark: boolean): void {
-    this.currentTheme = isDark ? DarkTheme : LightTheme;
+    ThemeManager.currentTheme = isDark ? DarkTheme : LightTheme;
     console.info(`Theme changed to ${isDark ? 'dark' : 'light'}`);
   }
 
-  /**
-   * 切换主题
-   */
   static toggleTheme(): void {
-    this.setTheme(!this.currentTheme.isDark);
+    ThemeManager.setTheme(!ThemeManager.currentTheme.isDark);
   }
 
-  /**
-   * 检查是否为深色主题
-   */
   static isDarkTheme(): boolean {
-    return this.currentTheme.isDark;
+    return ThemeManager.currentTheme.isDark;
   }
 
-  /**
-   * 获取颜色值
-   */
-  static getColor(name: keyof Theme['colors']): string {
-    return this.currentTheme.colors[name];
+  static getColor(name: string): string {
+    const colors = ThemeManager.currentTheme.colors;
+    switch (name) {
+      case 'primary': return colors.primary;
+      case 'secondary': return colors.secondary;
+      case 'background': return colors.background;
+      case 'surface': return colors.surface;
+      case 'text': return colors.text;
+      case 'textSecondary': return colors.textSecondary;
+      case 'error': return colors.error;
+      case 'success': return colors.success;
+      case 'accent': return colors.accent;
+      default: return colors.primary;
+    }
   }
 }

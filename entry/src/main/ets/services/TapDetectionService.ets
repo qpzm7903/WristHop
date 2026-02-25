@@ -1,13 +1,19 @@
 /**
  * 敲敲计 (TapCare) - 敲打检测服务
- * 管理传感器订阅和敲打事件回调
  */
-
 import { sensor } from '@kit.SensorServiceKit';
 import { BusinessError } from '@kit.BasicServicesKit';
 import { TapDetector } from './TapDetector';
-import type { TapRecord, BodyPart, CalibrationResult } from '../models/TapDataModels';
+import { TapRecord, BodyPart, CalibrationResult, BaselineData } from '../models/TapDataModels';
 import { ForceLevel, getForceLevel, generateId } from '../models/TapDataModels';
+import { SensorSimulator } from './SensorSimulator';
+import type { BaselineAccel } from './TapDetector';
+
+export interface SensorData {
+  x: number;
+  y: number;
+  z: number;
+}
 
 export type TapCallback = (tapRecord: TapRecord) => void;
 
@@ -19,6 +25,7 @@ export class TapDetectionService {
   private currentPart: BodyPart = BodyPart.GALLBLADDER_LEFT;
   private currentSessionId: string = '';
   private onTapCallback: TapCallback | null = null;
+  private isSimulationMode: boolean = false;
 
   private constructor() {}
 
@@ -29,135 +36,129 @@ export class TapDetectionService {
     return TapDetectionService.instance;
   }
 
-  /**
-   * 启动加速度传感器订阅
-   */
+  setSimulationMode(enabled: boolean): void {
+    this.isSimulationMode = enabled;
+    if (enabled) {
+      SensorSimulator.enableSimulation();
+    } else {
+      SensorSimulator.disableSimulation();
+    }
+  }
+
   startDetection(): void {
     if (this.isSubscribed) return;
     
     try {
-      // interval 单位：纳秒，50000000ns = 50ms = 20Hz（推荐省电模式）
-      sensor.on(
-        sensor.SensorId.ACCELEROMETER, 
-        (data: sensor.AccelerometerResponse) => {
+      if (this.isSimulationMode) {
+        SensorSimulator.startAccelerometerSimulation((data: SensorData) => {
           this.processAccelerometer(data);
-        }, 
-        { interval: 50000000 } // 50ms 间隔
-      );
+        });
+      } else {
+        sensor.on(
+          sensor.SensorId.ACCELEROMETER, 
+          (data: sensor.AccelerometerResponse) => {
+            const sensorData: SensorData = { x: data.x, y: data.y, z: data.z };
+            this.processAccelerometer(sensorData);
+          }, 
+          { interval: 50000000 }
+        );
+      }
       this.isSubscribed = true;
       console.info('Accelerometer subscribed successfully');
     } catch (error) {
-      const e: BusinessError = error as BusinessError;
-      console.error(`Failed to subscribe accelerometer: Code ${e.code}, ${e.message}`);
+      console.warn('Falling back to simulation mode');
+      this.setSimulationMode(true);
+      this.startDetection();
     }
   }
 
-  /**
-   * 启动陀螺仪传感器订阅（辅助判断）
-   */
   startGyroscope(): void {
     if (this.isGyroSubscribed) return;
     
     try {
-      sensor.on(
-        sensor.SensorId.GYROSCOPE, 
-        (data: sensor.GyroscopeResponse) => {
+      if (this.isSimulationMode) {
+        SensorSimulator.startGyroscopeSimulation((data: SensorData) => {
           this.processGyroscope(data);
-        }, 
-        { interval: 50000000 }
-      );
+        });
+      } else {
+        sensor.on(
+          sensor.SensorId.GYROSCOPE, 
+          (data: sensor.GyroscopeResponse) => {
+            const gyroData: SensorData = { x: data.x, y: data.y, z: data.z };
+            this.processGyroscope(gyroData);
+          }, 
+          { interval: 50000000 }
+        );
+      }
       this.isGyroSubscribed = true;
       console.info('Gyroscope subscribed successfully');
     } catch (error) {
-      const e: BusinessError = error as BusinessError;
-      console.error(`Failed to subscribe gyroscope: Code ${e.code}, ${e.message}`);
+      console.error(`Failed to subscribe gyroscope: ${JSON.stringify(error)}`);
     }
   }
 
-  /**
-   * 停止所有传感器订阅
-   */
   stopDetection(): void {
     if (!this.isSubscribed && !this.isGyroSubscribed) return;
     
-    try {
-      if (this.isSubscribed) {
-        sensor.off(sensor.SensorId.ACCELEROMETER);
-        this.isSubscribed = false;
-        console.info('Accelerometer unsubscribed');
+    SensorSimulator.stopSimulation();
+    if (!this.isSimulationMode) {
+      try {
+        if (this.isSubscribed) {
+          sensor.off(sensor.SensorId.ACCELEROMETER);
+          this.isSubscribed = false;
+        }
+        if (this.isGyroSubscribed) {
+          sensor.off(sensor.SensorId.GYROSCOPE);
+          this.isGyroSubscribed = false;
+        }
+      } catch (error) {
+        console.error(`Failed to unsubscribe: ${JSON.stringify(error)}`);
       }
-      if (this.isGyroSubscribed) {
-        sensor.off(sensor.SensorId.GYROSCOPE);
-        this.isGyroSubscribed = false;
-        console.info('Gyroscope unsubscribed');
-      }
-    } catch (error) {
-      const e: BusinessError = error as BusinessError;
-      console.error(`Failed to unsubscribe: Code ${e.code}, ${e.message}`);
+    } else {
+      this.isSubscribed = false;
+      this.isGyroSubscribed = false;
+    }
+    console.info('Detection stopped');
+  }
+
+  simulateTap(): void {
+    if (this.isSimulationMode) {
+      SensorSimulator.simulateTap();
+      console.info('Tap simulation triggered');
     }
   }
 
-  /**
-   * 设置敲打回调
-   */
   setOnTapCallback(callback: TapCallback): void {
     this.onTapCallback = callback;
   }
 
-  /**
-   * 设置当前敲打部位
-   */
   setCurrentPart(part: BodyPart): void {
     this.currentPart = part;
   }
 
-  /**
-   * 设置当前会话 ID
-   */
   setSessionId(sessionId: string): void {
     this.currentSessionId = sessionId;
   }
-
-  /**
-   * 校准基准加速度
-   */
-  calibrate(baselineAccel: { x: number, y: number, z: number }): void {
+  calibrate(baselineAccel: BaselineAccel): void {
     this.detector.setBaselineAccel(baselineAccel);
   }
 
-  /**
-   * 设置佩戴手
-   */
   setWearingHand(hand: 'left' | 'right'): void {
     this.detector.setWearingHand(hand);
   }
 
-  /**
-   * 重置检测器
-   */
   reset(): void {
     this.detector.reset();
   }
 
-  /**
-   * 检查是否正在检测
-   */
   isDetecting(): boolean {
     return this.isSubscribed;
   }
-
-  /**
-   * 处理加速度数据
-   */
-  private processAccelerometer(data: sensor.AccelerometerResponse): void {
-    // 如果没有陀螺仪数据，使用简化处理
-    const dummyGyro: sensor.GyroscopeResponse = {
-      x: 0,
-      y: 0,
-      z: 0
-    } as sensor.GyroscopeResponse;
-
-    const tapEvent = this.detector.processSensorData(data, dummyGyro);
+  private processAccelerometer(data: SensorData): void {
+    const dummyGyro: SensorData = { x: 0, y: 0, z: 0 };
+    const accelerometerData: sensor.AccelerometerResponse = { x: data.x, y: data.y, z: data.z, timestamp: 0, accuracy: 0 } as sensor.AccelerometerResponse;
+    const gyroscopeData: sensor.GyroscopeResponse = { x: dummyGyro.x, y: dummyGyro.y, z: dummyGyro.z, timestamp: 0, accuracy: 0 } as sensor.GyroscopeResponse;
+    const tapEvent = this.detector.processSensorData(accelerometerData, gyroscopeData);
     
     if (tapEvent && this.onTapCallback) {
       const tapRecord: TapRecord = {
@@ -179,11 +180,7 @@ export class TapDetectionService {
     }
   }
 
-  /**
-   * 处理陀螺仪数据
-   */
-  private processGyroscope(data: sensor.GyroscopeResponse): void {
-    // 陀螺仪数据主要用于辅助判断，具体逻辑在 TapDetector 中
-    // 这里可以添加额外的陀螺仪数据处理
+  private processGyroscope(data: SensorData): void {
+    console.debug(`Gyro data: ${data.x}, ${data.y}, ${data.z}`);
   }
 }
